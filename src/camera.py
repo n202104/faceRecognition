@@ -9,18 +9,11 @@ picam2.configure(config)
 
 # 启动摄像头
 picam2.start()
+print("摄像头初始化成功")  # 初始化成功后打印一句话
 
-while True:
-    # 捕获一帧图像，得到 NumPy 数组
+def capture_frame():
+    """
+    捕获一帧图像并返回NumPy数组。
+    """
     frame = picam2.capture_array()
-
-    # 在窗口显示图像
-    cv2.imshow("Camera Preview", frame)
-
-    # 如果按下 'q' 键则退出循环
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# 停止摄像头并关闭窗口
-picam2.stop()
-cv2.destroyAllWindows()
+    return frame

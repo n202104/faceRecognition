@@ -4,7 +4,10 @@ from face_recognition_module import load_known_faces, recognize_face
 from door_control import init_gpio, unlock_door, cleanup_gpio
 
 def main():
+    # 初始化GPIO
     init_gpio()
+    
+    # 加载已知人脸特征和对应名称
     known_face_encodings, known_face_names = load_known_faces()
     
     while True:
@@ -12,10 +15,10 @@ def main():
         if frame is None:
             continue
         
-        # 调整图像尺寸（可选，根据实际需要）
+        # 可选：调整图像尺寸（提高识别速度）
         frame_small = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
         
-        # 识别人脸
+        # 调用人脸识别函数
         name = recognize_face(frame_small, known_face_encodings, known_face_names)
         if name:
             print("识别到：", name)
