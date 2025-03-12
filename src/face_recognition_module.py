@@ -2,6 +2,8 @@ import cv2
 import face_recognition
 from picamera2 import Picamera2
 import time
+from door_control import control_door
+
 
 def main():
     # 加载已知人脸图像并计算其编码
@@ -15,8 +17,9 @@ def main():
     picam2.start()
     
     display_on = False             # 标记视频窗口是否已打开
-    last_face_time = time.time()     # 记录上一次检测到人脸的时间
-    recognition_start_time = None    # 记录当前人脸识别开始的时间
+    last_face_time = time.time()   # 记录上一次检测到人脸的时间
+    recognition_start_time = None  # 记录当前人脸识别开始的时间
+    door_triggered = False         # 新增标志，避免重复触发门锁操作
     
     frame_count = 0                # 帧计数器，每15帧更新一次检测
     cached_overlay_data = None     # 缓存检测结果，用于非检测帧绘制边框和文本
@@ -59,16 +62,22 @@ def main():
                         if True in matches:
                             color = (0, 255, 0)  # 绿色表示识别成功
                             text = "Recognition Successful"
-                            print("Recognition Successful")
+                            if not door_triggered:
+                                control_door(True)
+                                door_triggered = True
+                            print(text)
+                            
                         else:
                             color = (0, 0, 255)  # 红色表示识别失败
                             text = "Recognition Failed"
-                            print("Recognition Failed")
+                            print(text)
+                            
                         cached_overlay_data.append((top, right, bottom, left, color, text))
             else:
                 # 未检测到人脸时，重置识别开始时间及缓存
                 recognition_start_time = None
                 cached_overlay_data = None
+                door_triggered = False
 
         # 仅在窗口打开时绘制检测结果，并显示当前帧
         if display_on:

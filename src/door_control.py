@@ -18,12 +18,24 @@ def unlock_door():
     GPIO.output(LOCK_PIN, GPIO.LOW)   # 关闭继电器
     print("门锁已关闭")
 
+def control_door(is_recognized):
+    """
+    根据人脸识别结果控制门锁：
+    - 如果识别成功（is_recognized 为 True），则开启门锁；
+    - 如果识别失败，则不操作门锁。
+    """
+    if is_recognized:
+        unlock_door()
+    else:
+        print("识别失败，门锁保持关闭")
+
 def cleanup_gpio():
     GPIO.cleanup()
 
 if __name__ == '__main__':
     init_gpio()
     try:
-        unlock_door()
+        # 示例调用，假设识别结果为 True 时开启门锁
+        control_door(True)
     finally:
         cleanup_gpio()
