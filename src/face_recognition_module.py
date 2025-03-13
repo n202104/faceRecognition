@@ -3,6 +3,46 @@ import face_recognition
 from picamera2 import Picamera2
 import time
 from door_control import control_door
+import face_recognition
+import os
+
+
+def load_known_faces(known_faces_path):
+    known_face_encodings = []
+    known_face_names = []
+
+    for filename in os.listdir(known_faces_path):
+        if filename.endswith(".jpg") or filename.endswith(".png"):
+            # 加载图片并编码
+            image_path = os.path.join(known_faces_path, filename)
+            image = face_recognition.load_image_file(image_path)
+            encodings = face_recognition.face_encodings(image)
+            
+            # 如果成功编码到人脸，则添加到列表
+            if encodings:
+                known_face_encodings.append(encodings[0])
+                known_face_names.append(os.path.splitext(filename)[0])
+
+    return known_face_encodings, known_face_names
+
+def recognize_face(frame, known_face_encodings, known_face_names):
+    import face_recognition
+    import cv2
+
+    # 先转换为RGB格式（face_recognition只接受RGB格式）
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    face_locations = face_recognition.face_locations(frame_rgb)
+    face_encodings = face_recognition.face_encodings(frame_rgb, face_locations)
+
+    for face_encoding in face_encodings:
+        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+        if True in matches:
+            match_index = matches.index(True)
+            return known_face_names[match_index]
+
+    return None
+
 
 
 def main():

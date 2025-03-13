@@ -8,8 +8,10 @@ def main():
     init_gpio()
     
     # 加载已知人脸特征和对应名称
-    known_face_encodings, known_face_names = load_known_faces()
-    
+    known_faces_path = "/home/yun/myproject/known_faces"  # 修改成你的图片实际路径
+    known_face_encodings = load_known_faces(known_faces_path)
+    known_face_names = ["Known"]  # 如果只有一个人，可以这样固定名称
+
     while True:
         frame = capture_frame()
         if frame is None:
