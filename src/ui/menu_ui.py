@@ -2,7 +2,6 @@
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel
 from PyQt5.QtCore import Qt
 
-# 为避免循环导入，将打开其他界面的函数放在方法内部
 def open_login_ui():
     from ui.login_ui import Ui_logon
     return Ui_logon()
@@ -22,14 +21,11 @@ class Ui_Menu(QWidget):
     def init_ui(self):
         self.resize(1280, 800)
         self.label.move(140, 200)
+        self.label.setStyleSheet("QLabel{color:rgb(0,0,0,255); font-size:82px;font-weight:bold; font-family:Roman times;}")
         self.btn_ordinary.setGeometry(550, 420, 181, 61)
         self.btn_admin.setGeometry(550, 510, 181, 61)
-        self.label.setStyleSheet(
-            "QLabel{color:rgb(0,0,0,255); font-size:82px;font-weight:bold; font-family:Roman times;}")
-        self.btn_ordinary.setStyleSheet(
-            "QPushButton{color:rgb(0,0,0,255); font-size:30px; font-family:Roman times;}")
-        self.btn_admin.setStyleSheet(
-            "QPushButton{color:rgb(0,0,0,255); font-size:30px; font-family:Roman times;}")
+        self.btn_ordinary.setStyleSheet("QPushButton{color:rgb(0,0,0,255); font-size:30px; font-family:Roman times;}")
+        self.btn_admin.setStyleSheet("QPushButton{color:rgb(0,0,0,255); font-size:30px; font-family:Roman times;}")
         self.btn_admin.clicked.connect(self.slot_btn_admin)
         self.btn_ordinary.clicked.connect(self.slot_btn_ordinary)
 

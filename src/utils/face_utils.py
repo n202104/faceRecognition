@@ -6,13 +6,13 @@ import os
 from PIL import Image
 from utils.constants import CASCADE_PATH, FACE_DATA_PATH, FACE_TRAINING_PATH
 
-# 初始化Haar级联分类器
+# 初始化 Haar 级联分类器
 faceCascade = cv2.CascadeClassifier(CASCADE_PATH)
 
 def detect_faces(gray_frame):
     """
-    在灰度图像中检测人脸
-    返回人脸区域列表，格式为 (x, y, w, h)
+    在灰度图像中检测人脸。
+    返回检测到的人脸区域列表，每个区域为 (x, y, w, h)。
     """
     faces = faceCascade.detectMultiScale(
         gray_frame,
@@ -24,11 +24,11 @@ def detect_faces(gray_frame):
 
 def save_face_samples(user_id, image, sample_count):
     """
-    检测图像中的人脸，并将人脸区域保存为灰度图。
+    在给定图像中检测人脸，并保存检测到的人脸区域为灰度图像样本。
     参数:
-      user_id: 用户编号，用于文件命名
-      image: 原始图像（BGR格式）
-      sample_count: 当前已保存样本数量
+      user_id: 用户标识（用于文件命名）
+      image: 原始图像（BGR 格式）
+      sample_count: 当前已保存的样本数量
     返回更新后的样本计数。
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -46,10 +46,10 @@ def save_face_samples(user_id, image, sample_count):
 def get_images_and_labels(path):
     """
     遍历指定目录，读取所有保存的人脸图像及其标签。
-    文件名格式要求为 "User.{id}.{sample_number}.png"
+    文件名要求格式为 "User.{id}.{sample}.png"。
     返回:
-       face_samples: 人脸图像数组
-       ids: 对应的人脸标签列表
+      face_samples: 人脸图像数据列表
+      ids: 对应的人脸标签列表
     """
     imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
     face_samples = []
@@ -61,7 +61,6 @@ def get_images_and_labels(path):
             print(f"读取图片 {imagePath} 失败: {e}")
             continue
         img_numpy = np.array(PIL_img, 'uint8')
-        # 提取用户编号
         try:
             user_id = int(os.path.split(imagePath)[-1].split(".")[1])
         except Exception as e:
@@ -75,9 +74,9 @@ def get_images_and_labels(path):
 
 def train_faces():
     """
-    训练人脸识别模型，使用 FACE_DATA_PATH 目录下的样本数据，
+    使用 FACE_DATA_PATH 目录下的样本数据训练人脸识别模型，
     并将训练好的模型保存到 FACE_TRAINING_PATH。
-    返回训练出的不同人脸数量。
+    返回训练后不同人脸的数量。
     """
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     face_samples, ids = get_images_and_labels(FACE_DATA_PATH)

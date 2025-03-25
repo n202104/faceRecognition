@@ -1,17 +1,15 @@
-# utils/constants.py
+import os
 
-# 人脸标签对应的人物名称列表
+# 获取项目根目录（假设 utils 在 src/utils 里）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CASCADE_PATH = os.path.join(BASE_DIR, "resources", "haarcascades", "haarcascade_frontalface_default.xml")
+
+# 其它常量保持不变
 NAMES = [
     'None', 'oneStar', 'denghaibo', 'zhangzhaohui',
     'zhangchaoyang', 'guomo', 'yanjie', 'luochao',
     'yanggong', 'gaogong'
 ]
 
-# Haar级联分类器文件路径（请根据实际情况修改路径）
-CASCADE_PATH = './resources/haarcascades/haarcascade_frontalface_default.xml'
-
-# 保存采集人脸样本的目录
-FACE_DATA_PATH = './data/Face_data/'
-
-# 训练后模型文件保存路径
-FACE_TRAINING_PATH = './data/Face_training/trainer.yml'
+FACE_DATA_PATH = os.path.join(BASE_DIR, "data", "Face_data")
+FACE_TRAINING_PATH = os.path.join(BASE_DIR, "data", "Face_training", "trainer.yml")
