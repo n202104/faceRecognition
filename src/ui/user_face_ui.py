@@ -5,6 +5,8 @@ import cv2, numpy as np
 from picamera2 import Picamera2
 from utils.face_utils import detect_faces
 from utils.constants import NAMES
+import time
+
 
 class Ui_face_reco(QWidget):
     def __init__(self):

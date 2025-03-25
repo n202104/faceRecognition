@@ -1,13 +1,12 @@
 # ui/manager_face_ui.py
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QLineEdit, QGridLayout, QProgressBar, QMessageBox
-import threading, os, time
-import cv2, numpy as np
+import cv2, threading, os, time
+import numpy as np
 from PIL import Image
 from picamera2 import Picamera2
 from utils.face_utils import detect_faces
 from utils.constants import NAMES
-# 注意：在实际项目中，可以将 picamera2 配置参数及分辨率统一放在常量中
 
 class Ui_manager_face(QWidget):
     def __init__(self):
@@ -15,14 +14,15 @@ class Ui_manager_face(QWidget):
         self.ID_num = ""
         self.count = 0
         self.step = 0
+        self.training_in_progress = False  # 训练期间标志
         self.init_ui()
         self.camera_init()
         self.face_rec()
 
     def camera_init(self):
-        # 创建并配置 picamera2
+        # 使用 picamera2 替代 cv2.VideoCapture
         self.picam2 = Picamera2()
-        config = self.picam2.create_preview_configuration(main={"size": (640,480)})
+        config = self.picam2.create_preview_configuration(main={"size": (640, 480)})
         self.picam2.configure(config)
         self.picam2.start()
         time.sleep(1)  # 摄像头预热
@@ -42,8 +42,8 @@ class Ui_manager_face(QWidget):
         self.layoutWidget.setGeometry(1010, 350, 231, 251)
         self.gridLayout = QGridLayout(self.layoutWidget)
         self.buttons = {}
-        numbers = ['1','2','3','4','5','6','7','8','9','0']
-        positions = [(i,j) for i in range(4) for j in range(3)]
+        numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+        positions = [(i, j) for i in range(4) for j in range(3)]
         for idx, num in enumerate(numbers):
             btn = QPushButton(num, self)
             btn.setFixedHeight(50)
@@ -100,6 +100,7 @@ class Ui_manager_face(QWidget):
         from ui.login_ui import Ui_logon
         self.logon = Ui_logon()
         self.logon.show()
+        # 停止定时器与摄像头采集
         self.timer_camera.stop()
         self.picam2.stop()
         self.hide()
@@ -109,18 +110,24 @@ class Ui_manager_face(QWidget):
         self.timer_camera.start(30)
 
     def show_camera(self):
+        # 训练期间不调用预览检测
+        if self.training_in_progress:
+            return
         try:
-            image = self.picam2.capture_array()
+            frame = self.picam2.capture_array()
         except Exception as e:
             print("捕获图像失败:", e)
             return
-        # 翻转图像（根据需要）
-        image = cv2.flip(image, -1)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if frame is None or frame.size == 0:
+            print("捕获到空图像")
+            return
+        frame = cv2.flip(frame, -1)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = detect_faces(gray)
-        for (x, y, w, h) in faces:
-            cv2.rectangle(image, (x, y), (x+w, y+h), (255, 0, 0), 2)
-        show = cv2.resize(image, (960,720))
+        if faces is not None:
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        show = cv2.resize(frame, (960, 720))
         show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
         showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
         self.lab_face.setPixmap(QtGui.QPixmap.fromImage(showImage))
@@ -128,6 +135,8 @@ class Ui_manager_face(QWidget):
     def slot_btn_enter(self):
         self.count = 0
         self.step = 0
+        self.training_in_progress = False  # 初始时不是训练状态
+        self.frame_counter = 0  # 初始化帧计数器
         self.thread = threading.Thread(target=self.thread_pic)
         self.thread.start()
         self.timer = QtCore.QBasicTimer()
@@ -144,28 +153,47 @@ class Ui_manager_face(QWidget):
         print("线程开始采集样本...")
         print("用户 ID:", self.Edit_ID.text())
         self.file = "./data/Face_data/"
-        while True:
+        desired_samples = 60
+        if not os.path.exists(self.file):
+            os.makedirs(self.file, exist_ok=True)
+            os.chmod(self.file, 0o777)
+        # 采集样本，每10帧处理一次
+        while self.count < desired_samples:
             try:
                 img = self.picam2.capture_array()
             except Exception as e:
                 print("线程采集图像失败:", e)
                 continue
+            if img is None or img.size == 0:
+                print("采集到空图像")
+                continue
+            self.frame_counter += 1
+            if self.frame_counter % 10 != 0:
+                continue
             img = cv2.flip(img, -1)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             faces = detect_faces(gray)
-            if not os.path.exists(self.file):
-                os.makedirs(self.file, exist_ok=True)
-                os.chmod(self.file, 0o777)
+            if faces is None or len(faces) == 0:
+                print("未检测到人脸")
+                continue
             for (x, y, w, h) in faces:
                 cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
                 self.count += 1
-                cv2.imwrite(f"{self.file}/User.{self.Edit_ID.text()}.{self.count}.png", gray[y:y+h, x:x+w])
-            if self.count >= 10:         #拍照次数
-                print("样本采集完成!")
-                break
+                sample_filename = f"{self.file}/User.{self.Edit_ID.text()}.{self.count}.png"
+                cv2.imwrite(sample_filename, gray[y:y+h, x:x+w])
+                print(f"保存样本: {sample_filename}, 当前样本数: {self.count}")
+                if self.count >= desired_samples:
+                    break
+        print("样本采集完成!")
+        
+        # 停止预览定时器，避免在训练期间调用 detect_faces
+        QtCore.QMetaObject.invokeMethod(self.timer_camera, "stop", QtCore.Qt.QueuedConnection)
+        self.training_in_progress = True
+
+        # 训练模型
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         def getImagesAndLabels(path):
-            imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
+            imagePaths = [os.path.join(path, f) for f in os.listdir(path) if f.startswith("User.")]
             faceSamples = []
             ids = []
             self.progressBar.setProperty("value", 65)
@@ -181,20 +209,31 @@ class Ui_manager_face(QWidget):
                 except Exception as e:
                     print("解析文件名失败:", e)
                     continue
-                faces = detect_faces(img_numpy)
-                for (x, y, w, h) in faces:
+                detected_faces = detect_faces(img_numpy)
+                if detected_faces is None or len(detected_faces) == 0:
+                    print("图片中未检测到人脸:", imagePath)
+                    continue
+                for (x, y, w, h) in detected_faces:
                     faceSamples.append(img_numpy[y:y+h, x:x+w])
                     ids.append(user_id)
             return faceSamples, ids
+
         self.progressBar.setProperty("value", 75)
         print("\n [INFO] Training faces. It will take a few seconds. Wait ...")
         faces, ids = getImagesAndLabels(self.file)
+        if len(faces) == 0:
+            print("未采集到有效人脸样本，无法训练模型")
+            self.training_in_progress = False
+            return
         recognizer.train(faces, np.array(ids))
         self.progressBar.setProperty("value", 85)
         training_dir = "./data/Face_training/"
         if not os.path.exists(training_dir):
             os.makedirs(training_dir, exist_ok=True)
             os.chmod(training_dir, 0o777)
-        recognizer.write(f"{training_dir}/trainer.yml")
-        print("\n [INFO] {0} faces trained. Exiting Program".format(len(set(ids))))
+        trainer_path = f"{training_dir}/trainer.yml"
+        recognizer.write(trainer_path)
+        print("\n [INFO] {0} faces trained. 模型保存在 {1}".format(len(set(ids)), trainer_path))
         self.progressBar.setProperty("value", 100)
+        
+        self.training_in_progress = False
